@@ -1,0 +1,1957 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SubFlow Pro - Billing & Invoice System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Inter', sans-serif; background: #0f172a; color: #e2e8f0; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .hover-lift { transition: all 0.3s ease; }
+        .hover-lift:hover { transform: translateY(-2px); box-shadow: 0 10px 40px -10px rgba(99, 102, 241, 0.3); }
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(99, 102, 241, 0.5); border-radius: 4px; }
+        .template-preview { background: white; color: black; padding: 20px; border-radius: 8px; min-height: 400px; }
+        .email-template { border-left: 4px solid #6366f1; background: rgba(99, 102, 241, 0.1); }
+        .drop-zone { border: 2px dashed rgba(99, 102, 241, 0.5); transition: all 0.3s; }
+        .drop-zone.dragover { border-color: #6366f1; background: rgba(99, 102, 241, 0.1); }
+    </style>
+</head>
+<body class="min-h-screen overflow-hidden">
+
+    <!-- Sidebar -->
+    <aside class="fixed left-0 top-0 h-full w-64 bg-slate-900 border-r border-slate-800 z-50 overflow-y-auto custom-scrollbar">
+        <div class="p-6 border-b border-slate-800">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
+                    <i class="fas fa-file-invoice-dollar text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold gradient-text">SubFlow Pro</h1>
+                    <p class="text-xs text-slate-500">Billing System</p>
+                </div>
+            </div>
+        </div>
+
+        <nav class="p-4 space-y-2">
+            <button onclick="showSection('dashboard')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 transition-all">
+                <i class="fas fa-chart-line w-5"></i>
+                <span class="font-medium">Dashboard</span>
+            </button>
+            <button onclick="showSection('clients')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-all">
+                <i class="fas fa-users w-5"></i>
+                <span class="font-medium">Clients</span>
+                <span id="clientCountBadge" class="ml-auto bg-slate-700 text-xs px-2 py-1 rounded-full">0</span>
+            </button>
+            <button onclick="showSection('templates')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-all">
+                <i class="fas fa-file-alt w-5"></i>
+                <span class="font-medium">Invoice Templates</span>
+            </button>
+            <button onclick="showSection('emails')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-all">
+                <i class="fas fa-envelope w-5"></i>
+                <span class="font-medium">Email Settings</span>
+            </button>
+            <button onclick="showSection('import')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-all">
+                <i class="fas fa-file-excel w-5"></i>
+                <span class="font-medium">Import/Export</span>
+            </button>
+            <button onclick="showSection('automation')" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition-all">
+                <i class="fas fa-robot w-5"></i>
+                <span class="font-medium">Automation</span>
+                <span id="pendingEmails" class="ml-auto bg-amber-500/20 text-amber-400 text-xs px-2 py-1 rounded-full hidden">0</span>
+            </button>
+        </nav>
+
+        <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-slate-800">
+            <div class="glass rounded-xl p-4">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                    <span class="text-xs text-slate-400" id="systemStatus">System Ready</span>
+                </div>
+                <button onclick="testEmailConnection()" class="w-full py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-xs transition-colors">
+                    <i class="fas fa-plug mr-1"></i>Test Email
+                </button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="ml-64 p-6 h-screen overflow-y-auto custom-scrollbar">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6 sticky top-0 bg-slate-900/90 backdrop-blur z-40 py-4 border-b border-slate-800">
+            <div>
+                <h2 id="pageTitle" class="text-2xl font-bold text-white">Dashboard</h2>
+                <p class="text-sm text-slate-400" id="currentDate"></p>
+            </div>
+            <div class="flex items-center gap-3">
+                <button onclick="manualEmailCheck()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors border border-slate-700" title="Check and send pending emails now">
+                    <i class="fas fa-paper-plane mr-2"></i>Send Pending Emails
+                </button>
+                <button onclick="openAddClientModal()" class="px-5 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:opacity-90 rounded-xl font-medium shadow-lg shadow-indigo-500/25 transition-all hover-lift text-sm">
+                    <i class="fas fa-plus mr-2"></i>Add Client
+                </button>
+            </div>
+        </header>
+
+        <!-- Dashboard -->
+        <section id="dashboard" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div class="glass rounded-2xl p-5 hover-lift">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <p class="text-slate-400 text-xs uppercase tracking-wider">Total Clients</p>
+                            <h3 class="text-2xl font-bold text-white mt-1" id="totalClients">0</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-lg bg-indigo-500/20 flex items-center justify-center text-indigo-400">
+                            <i class="fas fa-users"></i>
+                        </div>
+                    </div>
+                    <div class="text-xs text-emerald-400"><i class="fas fa-arrow-up mr-1"></i>Active subscriptions</div>
+                </div>
+
+                <div class="glass rounded-2xl p-5 hover-lift">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <p class="text-slate-400 text-xs uppercase tracking-wider">Monthly Revenue</p>
+                            <h3 class="text-2xl font-bold text-white mt-1" id="monthlyRevenue">$0</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                    </div>
+                    <div class="text-xs text-slate-400">Projected this month</div>
+                </div>
+
+                <div class="glass rounded-2xl p-5 hover-lift">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <p class="text-slate-400 text-xs uppercase tracking-wider">Due This Week</p>
+                            <h3 class="text-2xl font-bold text-white mt-1" id="dueThisWeek">0</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-lg bg-amber-500/20 flex items-center justify-center text-amber-400">
+                            <i class="fas fa-calendar-week"></i>
+                        </div>
+                    </div>
+                    <div class="text-xs text-amber-400">Renewals pending</div>
+                </div>
+
+                <div class="glass rounded-2xl p-5 hover-lift">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <p class="text-slate-400 text-xs uppercase tracking-wider">Overdue</p>
+                            <h3 class="text-2xl font-bold text-white mt-1" id="overdueCount">0</h3>
+                        </div>
+                        <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center text-red-400">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                    </div>
+                    <div class="text-xs text-red-400">Requires action</div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-clock text-indigo-400"></i>
+                        Upcoming Renewals (Next 30 Days)
+                    </h3>
+                    <div class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar" id="upcomingRenewalsList">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-history text-purple-400"></i>
+                        Recent Email Activity
+                    </h3>
+                    <div class="space-y-3 max-h-96 overflow-y-auto custom-scrollbar" id="emailActivityLog">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Clients Section -->
+        <section id="clients" class="hidden space-y-6">
+            <div class="glass rounded-2xl overflow-hidden">
+                <div class="p-4 border-b border-slate-800 flex flex-wrap gap-4 justify-between items-center">
+                    <div class="flex gap-3 flex-1">
+                        <div class="relative flex-1 max-w-md">
+                            <input type="text" id="searchClients" placeholder="Search by name, property, or email..." 
+                                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 pl-10 text-sm focus:outline-none focus:border-indigo-500"
+                                onkeyup="renderClients()">
+                            <i class="fas fa-search absolute left-3 top-2.5 text-slate-500"></i>
+                        </div>
+                        <select id="filterStatus" onchange="renderClients()" class="bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                            <option value="">All Status</option>
+                            <option value="Active">Active</option>
+                            <option value="Trial">Trial</option>
+                            <option value="Expired">Expired</option>
+                            <option value="Cancelled">Cancelled</option>
+                        </select>
+                    </div>
+                    <div class="flex gap-2">
+                        <button onclick="generateInvoicesBulk()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm transition-colors">
+                            <i class="fas fa-file-invoice mr-2"></i>Generate Invoices
+                        </button>
+                        <button onclick="exportToExcel()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors border border-slate-700">
+                            <i class="fas fa-download mr-2"></i>Export
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-slate-800/50 text-slate-400">
+                            <tr>
+                                <th class="px-4 py-3 font-medium"><input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded bg-slate-700 border-slate-600"></th>
+                                <th class="px-4 py-3 font-medium">Client Details</th>
+                                <th class="px-4 py-3 font-medium">Package</th>
+                                <th class="px-4 py-3 font-medium">Amount</th>
+                                <th class="px-4 py-3 font-medium">Renewal Date</th>
+                                <th class="px-4 py-3 font-medium">Status</th>
+                                <th class="px-4 py-3 font-medium">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="clientsTableBody" class="divide-y divide-slate-800">
+                            <!-- Populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Invoice Templates Section -->
+        <section id="templates" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Template Editor -->
+                <div class="space-y-6">
+                    <div class="glass rounded-2xl p-6">
+                        <h3 class="text-lg font-semibold mb-4">Template Settings</h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-2">Template Name</label>
+                                <input type="text" id="templateName" value="Standard Invoice" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-2">Company Logo</label>
+                                <div class="drop-zone rounded-lg p-6 text-center cursor-pointer" onclick="document.getElementById('logoUpload').click()" ondrop="handleLogoDrop(event)" ondragover="event.preventDefault()" ondragleave="this.classList.remove('dragover')">
+                                    <input type="file" id="logoUpload" accept="image/*" class="hidden" onchange="handleLogoUpload(event)">
+                                    <div id="logoPreview" class="hidden mb-3">
+                                        <img id="logoImg" class="max-h-20 mx-auto">
+                                    </div>
+                                    <i class="fas fa-cloud-upload-alt text-3xl text-slate-500 mb-2"></i>
+                                    <p class="text-sm text-slate-400">Drop logo here or click to upload</p>
+                                    <p class="text-xs text-slate-500 mt-1">PNG, JPG (Max 2MB)</p>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-2">Template Type</label>
+                                <div class="grid grid-cols-2 gap-3">
+                                    <button onclick="setTemplateType('html')" class="template-type-btn active px-4 py-3 bg-indigo-600 rounded-lg text-sm border border-indigo-500" data-type="html">
+                                        <i class="fas fa-code mr-2"></i>HTML Editor
+                                    </button>
+                                    <button onclick="setTemplateType('pdf')" class="template-type-btn px-4 py-3 bg-slate-800 rounded-lg text-sm border border-slate-700" data-type="pdf">
+                                        <i class="fas fa-file-pdf mr-2"></i>Upload PDF
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div id="pdfUploadSection" class="hidden">
+                                <label class="block text-sm text-slate-400 mb-2">Upload PDF Template</label>
+                                <div class="drop-zone rounded-lg p-6 text-center cursor-pointer" onclick="document.getElementById('pdfUpload').click()">
+                                    <input type="file" id="pdfUpload" accept=".pdf" class="hidden" onchange="handlePDFUpload(event)">
+                                    <i class="fas fa-file-pdf text-3xl text-red-400 mb-2"></i>
+                                    <p class="text-sm text-slate-400">Upload PDF with placeholders</p>
+                                    <p class="text-xs text-slate-500 mt-1">Use {{CLIENT_NAME}}, {{AMOUNT}}, {{DUE_DATE}} as placeholders</p>
+                                </div>
+                                <div id="pdfTemplateName" class="mt-2 text-sm text-emerald-400 hidden">
+                                    <i class="fas fa-check mr-1"></i><span></span>
+                                </div>
+                            </div>
+
+                            <div id="htmlEditorSection">
+                                <label class="block text-sm text-slate-400 mb-2">Header Content</label>
+                                <textarea id="templateHeader" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 font-mono" placeholder="Company Name, Address, GST Number...">{{COMPANY_NAME}}
+{{COMPANY_ADDRESS}}
+{{COMPANY_PHONE}} | {{COMPANY_EMAIL}}</textarea>
+
+                                <label class="block text-sm text-slate-400 mb-2 mt-4">Invoice Body Template</label>
+                                <textarea id="templateBody" rows="8" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 font-mono" placeholder="Use {{placeholders}}..."><div style="padding: 20px;">
+    <h2 style="color: #6366f1; border-bottom: 2px solid #6366f1; padding-bottom: 10px;">INVOICE</h2>
+    <div style="margin: 20px 0;">
+        <p><strong>Bill To:</strong> {{CLIENT_NAME}}</p>
+        <p><strong>Property:</strong> {{PROPERTY_NAME}}</p>
+        <p><strong>Email:</strong> {{CLIENT_EMAIL}}</p>
+    </div>
+    <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
+        <tr style="background: #f3f4f6;">
+            <th style="padding: 10px; text-align: left; border: 1px solid #ddd;">Description</th>
+            <th style="padding: 10px; text-align: right; border: 1px solid #ddd;">Amount</th>
+        </tr>
+        <tr>
+            <td style="padding: 10px; border: 1px solid #ddd;">
+                {{PACKAGE_TYPE}} Package - {{SUBSCRIPTION_TYPE}}<br>
+                <small>{{ADDONS}}</small>
+            </td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">{{CURRENCY}} {{AMOUNT}}</td>
+        </tr>
+        <tr style="background: #f3f4f6; font-weight: bold;">
+            <td style="padding: 10px; border: 1px solid #ddd;">Total</td>
+            <td style="padding: 10px; text-align: right; border: 1px solid #ddd;">{{CURRENCY}} {{AMOUNT}}</td>
+        </tr>
+    </table>
+    <div style="background: #fef3c7; padding: 15px; border-radius: 5px; margin-top: 20px;">
+        <p><strong>Due Date:</strong> {{DUE_DATE}}</p>
+        <p><strong>Valid Till:</strong> {{VALID_TILL}}</p>
+    </div>
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ddd; text-align: center; color: #666;">
+        <p>Thank you for your business!</p>
+        <p style="font-size: 12px;">For queries, contact: {{SALES_PERSON}}</p>
+    </div>
+</div></textarea>
+
+                                <label class="block text-sm text-slate-400 mb-2 mt-4">Footer / Terms</label>
+                                <textarea id="templateFooter" rows="3" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500 font-mono">Payment Terms: Net 15 days
+Bank Details: {{BANK_DETAILS}}
+GST: {{GST_NUMBER}}</textarea>
+                            </div>
+
+                            <div class="flex gap-3 pt-4 border-t border-slate-800">
+                                <button onclick="saveTemplate()" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm font-medium transition-colors">
+                                    <i class="fas fa-save mr-2"></i>Save Template
+                                </button>
+                                <button onclick="previewTemplate()" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors border border-slate-700">
+                                    <i class="fas fa-eye mr-2"></i>Preview
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Preview -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex justify-between items-center">
+                        <span>Live Preview</span>
+                        <button onclick="downloadPreviewPDF()" class="text-sm text-indigo-400 hover:text-indigo-300">
+                            <i class="fas fa-download mr-1"></i>Download PDF
+                        </button>
+                    </h3>
+                    <div id="templatePreview" class="template-preview overflow-auto max-h-[600px]">
+                        <div class="text-center text-gray-400 mt-20">
+                            <i class="fas fa-file-invoice text-4xl mb-3"></i>
+                            <p>Click "Preview" to see invoice template</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Saved Templates -->
+            <div class="glass rounded-2xl p-6">
+                <h3 class="text-lg font-semibold mb-4">Saved Templates</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4" id="savedTemplatesList">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Email Settings Section -->
+        <section id="emails" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-server text-indigo-400"></i>
+                        SMTP Configuration
+                    </h3>
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-2">SMTP Host</label>
+                                <input type="text" id="smtpHost" placeholder="smtp.gmail.com" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-2">Port</label>
+                                <input type="number" id="smtpPort" value="587" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Encryption</label>
+                            <select id="smtpSecure" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                                <option value="tls">TLS (587)</option>
+                                <option value="ssl">SSL (465)</option>
+                                <option value="none">None (25)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Username / Email</label>
+                            <input type="email" id="smtpUser" placeholder="your-email@gmail.com" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Password / App Password</label>
+                            <input type="password" id="smtpPass" placeholder="••••••••" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm focus:outline-none focus:border-indigo-500">
+                            <p class="text-xs text-slate-500 mt-1">For Gmail, use App Password from Google Account settings</p>
+                        </div>
+
+                        <div class="flex gap-3 pt-4 border-t border-slate-800">
+                            <button onclick="saveEmailSettings()" class="flex-1 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm font-medium transition-colors">
+                                <i class="fas fa-save mr-2"></i>Save Settings
+                            </button>
+                            <button onclick="testEmailConnection()" class="flex-1 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg text-sm transition-colors border border-slate-700">
+                                <i class="fas fa-paper-plane mr-2"></i>Test Connection
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-envelope-open-text text-purple-400"></i>
+                        Email Templates
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="email-template p-4 rounded-xl">
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="font-medium text-indigo-300">Pre-Renewal (7 Days Before)</h4>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="enablePreRenewal" checked class="sr-only peer">
+                                    <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-indigo-600"></div>
+                                </label>
+                            </div>
+                            <input type="text" id="preRenewalSubject" value="Upcoming Renewal: {{PROPERTY_NAME}} - Invoice #{{INVOICE_NUMBER}}" class="w-full bg-slate-800/50 border border-slate-700 rounded px-3 py-2 text-sm mb-2" placeholder="Subject">
+                            <textarea id="preRenewalBody" rows="4" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm" placeholder="Email body...">Dear {{CLIENT_NAME}},
+
+This is a friendly reminder that your subscription for {{PROPERTY_NAME}} is due for renewal on {{DUE_DATE}}.
+
+Amount Due: {{CURRENCY}} {{AMOUNT}}
+Package: {{PACKAGE_TYPE}} ({{SUBSCRIPTION_TYPE}})
+Invoice Number: {{INVOICE_NUMBER}}
+
+Please find the attached invoice for your records. Kindly process the payment before the due date to avoid service interruption.
+
+If you have any questions, feel free to contact your account manager {{SALES_PERSON}}.
+
+Best regards,
+{{COMPANY_NAME}}</textarea>
+                        </div>
+
+                        <div class="email-template p-4 rounded-xl border-l-4 border-amber-500">
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="font-medium text-amber-300">First Reminder (7 Days After Due)</h4>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="enablePostRenewal" checked class="sr-only peer">
+                                    <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+                                </label>
+                            </div>
+                            <input type="text" id="postRenewalSubject" value="Payment Overdue: {{PROPERTY_NAME}} - Action Required" class="w-full bg-slate-800/50 border border-slate-700 rounded px-3 py-2 text-sm mb-2">
+                            <textarea id="postRenewalBody" rows="4" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm">Dear {{CLIENT_NAME}},
+
+We noticed that your payment for {{PROPERTY_NAME}} is now 7 days overdue.
+
+Outstanding Amount: {{CURRENCY}} {{AMOUNT}}
+Original Due Date: {{DUE_DATE}}
+Days Overdue: 7
+
+Please settle this invoice at your earliest convenience to avoid late fees and service suspension.
+
+Attached: Original Invoice #{{INVOICE_NUMBER}}
+
+Best regards,
+{{COMPANY_NAME}}
+Accounts Team</textarea>
+                        </div>
+
+                        <div class="email-template p-4 rounded-xl border-l-4 border-red-500">
+                            <div class="flex justify-between items-center mb-3">
+                                <h4 class="font-medium text-red-300">Continuous Follow-up (8+ Days)</h4>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" id="enableContinuous" checked class="sr-only peer">
+                                    <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600"></div>
+                                </label>
+                            </div>
+                            <input type="text" id="continuousSubject" value="URGENT: Payment Overdue {{DAYS_OVERDUE}} Days - {{PROPERTY_NAME}}" class="w-full bg-slate-800/50 border border-slate-700 rounded px-3 py-2 text-sm mb-2">
+                            <textarea id="continuousBody" rows="4" class="w-full bg-slate-800/50 border border-slate-700 rounded-lg px-3 py-2 text-sm">Dear {{CLIENT_NAME}},
+
+**URGENT: ACCOUNT SUSPENSION PENDING**
+
+Your account for {{PROPERTY_NAME}} is now {{DAYS_OVERDUE}} days overdue.
+
+IMMEDIATE ACTION REQUIRED:
+Amount Due: {{CURRENCY}} {{AMOUNT}}
+Invoice: #{{INVOICE_NUMBER}}
+
+To avoid service suspension and additional late charges, please make payment within 24 hours.
+
+Contact {{SALES_PERSON}} immediately if you need to discuss payment arrangements.
+
+{{COMPANY_NAME}}
+Accounts Department</textarea>
+                        </div>
+
+                        <button onclick="saveEmailTemplates()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg text-sm font-medium transition-colors">
+                            <i class="fas fa-save mr-2"></i>Save Email Templates
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CC Configuration -->
+            <div class="glass rounded-2xl p-6">
+                <h3 class="text-lg font-semibold mb-4">Default CC Recipients</h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-2">Accounts Email</label>
+                        <input type="email" id="ccAccounts" placeholder="accounts@company.com" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-2">Manager Email</label>
+                        <input type="email" id="ccManager" placeholder="manager@company.com" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-slate-400 mb-2">Sales Email</label>
+                        <input type="email" id="ccSales" placeholder="sales@company.com" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 text-sm">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Import/Export Section -->
+        <section id="import" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Import -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-file-import text-emerald-400"></i>
+                        Import Clients from Excel
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+                            <h4 class="font-medium mb-3 text-indigo-400">Required Excel Format:</h4>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-xs text-left">
+                                    <thead class="text-slate-400 border-b border-slate-700">
+                                        <tr>
+                                            <th class="pb-2">Column A</th>
+                                            <th class="pb-2">Column B</th>
+                                            <th class="pb-2">Column C</th>
+                                            <th class="pb-2">...</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="text-slate-300">
+                                        <tr class="border-b border-slate-800"><td class="py-1">Client_ID</td><td>Property_Name</td><td>Client_Name</td><td>...</td></tr>
+                                        <tr class="border-b border-slate-800"><td class="py-1">CLI-001</td><td>Grand Hotel</td><td>John Doe</td><td>...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button onclick="downloadFormatExcel()" class="mt-3 text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1">
+                                <i class="fas fa-download"></i> Download Format Template
+                            </button>
+                        </div>
+
+                        <div class="drop-zone rounded-xl p-8 text-center cursor-pointer" onclick="document.getElementById('excelUpload').click()" ondrop="handleExcelDrop(event)" ondragover="event.preventDefault(); this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')">
+                            <input type="file" id="excelUpload" accept=".xlsx,.xls,.csv" class="hidden" onchange="handleExcelUpload(event)">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-indigo-400 mb-3"></i>
+                            <p class="text-sm font-medium text-white mb-1">Drop Excel file here or click to browse</p>
+                            <p class="text-xs text-slate-400">Supports .xlsx, .xls, .csv files</p>
+                        </div>
+
+                        <div id="importPreview" class="hidden">
+                            <h4 class="font-medium mb-2 text-sm">Preview (First 5 rows):</h4>
+                            <div class="bg-slate-800 rounded-lg p-3 max-h-40 overflow-y-auto custom-scrollbar">
+                                <table class="w-full text-xs" id="previewTable"></table>
+                            </div>
+                            <div class="flex gap-3 mt-3">
+                                <button onclick="confirmImport()" class="flex-1 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-lg text-sm font-medium transition-colors">
+                                    <i class="fas fa-check mr-2"></i>Confirm Import
+                                </button>
+                                <button onclick="cancelImport()" class="flex-1 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm transition-colors">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+
+                        <div id="importStats" class="hidden bg-slate-800/50 rounded-lg p-4 border border-slate-700">
+                            <div class="flex justify-between text-sm mb-2">
+                                <span class="text-slate-400">Total Rows:</span>
+                                <span class="text-white" id="statTotal">0</span>
+                            </div>
+                            <div class="flex justify-between text-sm mb-2">
+                                <span class="text-slate-400">Successful:</span>
+                                <span class="text-emerald-400" id="statSuccess">0</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-slate-400">Failed:</span>
+                                <span class="text-red-400" id="statFailed">0</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Export -->
+                <div class="glass rounded-2xl p-6">
+                    <h3 class="text-lg font-semibold mb-4 flex items-center gap-2">
+                        <i class="fas fa-file-export text-indigo-400"></i>
+                        Export Data
+                    </h3>
+                    
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="exportToExcel('clients')" class="p-4 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all text-left group">
+                                <i class="fas fa-users text-2xl text-indigo-400 mb-2 group-hover:scale-110 transition-transform"></i>
+                                <h4 class="font-medium text-sm">Export Clients</h4>
+                                <p class="text-xs text-slate-500 mt-1">All client data with subscriptions</p>
+                            </button>
+                            <button onclick="exportToExcel('invoices')" class="p-4 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all text-left group">
+                                <i class="fas fa-file-invoice text-2xl text-emerald-400 mb-2 group-hover:scale-110 transition-transform"></i>
+                                <h4 class="font-medium text-sm">Export Invoices</h4>
+                                <p class="text-xs text-slate-500 mt-1">All generated invoices</p>
+                            </button>
+                            <button onclick="exportToExcel('payments')" class="p-4 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all text-left group">
+                                <i class="fas fa-money-bill-wave text-2xl text-amber-400 mb-2 group-hover:scale-110 transition-transform"></i>
+                                <h4 class="font-medium text-sm">Export Payments</h4>
+                                <p class="text-xs text-slate-500 mt-1">Payment history & records</p>
+                            </button>
+                            <button onclick="exportToExcel('full')" class="p-4 bg-slate-800 hover:bg-slate-700 rounded-xl border border-slate-700 transition-all text-left group">
+                                <i class="fas fa-database text-2xl text-purple-400 mb-2 group-hover:scale-110 transition-transform"></i>
+                                <h4 class="font-medium text-sm">Full Backup</h4>
+                                <p class="text-xs text-slate-500 mt-1">Complete system backup</p>
+                            </button>
+                        </div>
+
+                        <div class="bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+                            <h4 class="font-medium mb-3 text-sm text-indigo-400">Quick Export Options</h4>
+                            <div class="space-y-2">
+                                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="checkbox" id="exportActiveOnly" class="rounded bg-slate-700 border-slate-600 text-indigo-600">
+                                    <span>Active clients only</span>
+                                </label>
+                                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="checkbox" id="exportWithHistory" class="rounded bg-slate-700 border-slate-600 text-indigo-600">
+                                    <span>Include email history</span>
+                                </label>
+                                <label class="flex items-center gap-2 text-sm cursor-pointer">
+                                    <input type="checkbox" id="exportDueSoon" class="rounded bg-slate-700 border-slate-600 text-indigo-600">
+                                    <span>Only renewals due in 30 days</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Field Mapping -->
+            <div class="glass rounded-2xl p-6">
+                <h3 class="text-lg font-semibold mb-4">Excel Column Mapping</h3>
+                <p class="text-sm text-slate-400 mb-4">Map your Excel columns to system fields (auto-detected if headers match)</p>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3" id="fieldMapping">
+                    <!-- Generated by JS -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Automation Section -->
+        <section id="automation" class="hidden space-y-6">
+            <div class="glass rounded-2xl p-6">
+                <h3 class="text-lg font-semibold mb-4">Automation Schedule</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="bg-indigo-900/30 border border-indigo-500/30 rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-indigo-400 font-medium">Pre-Renewal</span>
+                            <span class="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-1 rounded">7 Days Before</span>
+                        </div>
+                        <p class="text-xs text-slate-400">Invoice + gentle reminder</p>
+                        <div class="mt-3 text-2xl font-bold text-white" id="countPreRenewal">0</div>
+                        <p class="text-xs text-slate-500">pending today</p>
+                    </div>
+
+                    <div class="bg-amber-900/30 border border-amber-500/30 rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-amber-400 font-medium">First Reminder</span>
+                            <span class="text-xs bg-amber-500/20 text-amber-300 px-2 py-1 rounded">7 Days After</span>
+                        </div>
+                        <p class="text-xs text-slate-400">Overdue notice</p>
+                        <div class="mt-3 text-2xl font-bold text-white" id="countPostRenewal">0</div>
+                        <p class="text-xs text-slate-500">pending today</p>
+                    </div>
+
+                    <div class="bg-red-900/30 border border-red-500/30 rounded-xl p-4">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-red-400 font-medium">Follow-up</span>
+                            <span class="text-xs bg-red-500/20 text-red-300 px-2 py-1 rounded">Daily 8+ Days</span>
+                        </div>
+                        <p class="text-xs text-slate-400">Urgent daily reminders</p>
+                        <div class="mt-3 text-2xl font-bold text-white" id="countContinuous">0</div>
+                        <p class="text-xs text-slate-500">pending today</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-4">
+                    <button onclick="runAutomationNow()" class="flex-1 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-90 rounded-xl font-medium transition-all">
+                        <i class="fas fa-play mr-2"></i>Run Automation Now
+                    </button>
+                    <button onclick="scheduleAutomation()" class="flex-1 py-3 bg-slate-800 hover:bg-slate-700 rounded-xl font-medium transition-all border border-slate-700">
+                        <i class="fas fa-clock mr-2"></i>Schedule Daily Check
+                    </button>
+                </div>
+
+                <div class="mt-6 bg-slate-800/50 rounded-xl p-4 border border-slate-700">
+                    <h4 class="font-medium mb-3 text-sm">Automation Log (Last 50 actions)</h4>
+                    <div class="max-h-64 overflow-y-auto custom-scrollbar space-y-2" id="automationLog">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Add/Edit Client Modal -->
+    <div id="clientModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden overflow-y-auto">
+        <div class="min-h-screen px-4 py-8 flex items-center justify-center">
+            <div class="bg-slate-900 border border-slate-700 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto custom-scrollbar relative">
+                <button onclick="closeClientModal()" class="absolute top-4 right-4 text-slate-400 hover:text-white z-10">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+                
+                <div class="p-6 border-b border-slate-800 sticky top-0 bg-slate-900 z-0">
+                    <h3 class="text-xl font-bold gradient-text" id="modalTitle">Add New Client</h3>
+                </div>
+
+                <form id="clientForm" onsubmit="saveClient(event)" class="p-6 space-y-6">
+                    <input type="hidden" id="editClientId">
+                    
+                    <!-- Basic Info -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Client ID *</label>
+                            <input type="text" id="clientId" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500" placeholder="CLI-001">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Property Name *</label>
+                            <input type="text" id="propertyName" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500" placeholder="Grand Hotel">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Client Name *</label>
+                            <input type="text" id="clientName" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500" placeholder="John Doe">
+                        </div>
+                    </div>
+
+                    <!-- Contact -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Phone</label>
+                            <input type="tel" id="contactNumber" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500" placeholder="+1 234 567 890">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">WhatsApp</label>
+                            <input type="tel" id="whatsappNumber" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500" placeholder="+1 234 567 890">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Sales Person</label>
+                            <input type="text" id="salesPerson" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500" placeholder="Sales Rep Name">
+                        </div>
+                    </div>
+
+                    <!-- Emails -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">Primary Email *</label>
+                            <input type="email" id="email1" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500" placeholder="primary@example.com">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">CC Email 1</label>
+                            <input type="email" id="email2" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500" placeholder="accounts@example.com">
+                        </div>
+                        <div>
+                            <label class="block text-sm text-slate-400 mb-2">CC Email 2</label>
+                            <input type="email" id="email3" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500" placeholder="manager@example.com">
+                        </div>
+                    </div>
+
+                    <!-- Subscription -->
+                    <div class="border-t border-slate-800 pt-6">
+                        <h4 class="font-semibold mb-4 text-indigo-400">Subscription Details</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-2">Package *</label>
+                                <select id="packageType" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
+                                    <option value="Starter">Starter</option>
+                                    <option value="Professional">Professional</option>
+                                    <option value="Enterprise">Enterprise</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-2">Billing Cycle *</label>
+                                <select id="subscriptionType" required onchange="calculateRenewalDate()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
+                                    <option value="Monthly">Monthly</option>
+                                    <option value="Quarterly">Quarterly</option>
+                                    <option value="Half-Yearly">Half-Yearly</option>
+                                    <option value="Yearly">Yearly</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-2">Currency</label>
+                                <select id="currency" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
+                                    <option value="USD">USD ($)</option>
+                                    <option value="EUR">EUR (€)</option>
+                                    <option value="GBP">GBP (£)</option>
+                                    <option value="INR">INR (₹)</option>
+                                    <option value="AUD">AUD ($)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-2">Amount *</label>
+                                <input type="number" id="subscriptionAmount" required step="0.01" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500" placeholder="0.00">
+                            </div>
+                        </div>
+
+                        <!-- Add-ons -->
+                        <div class="mt-4">
+                            <label class="block text-sm text-slate-400 mb-2">Included Services</label>
+                            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <label class="flex items-center gap-2 p-3 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
+                                    <input type="checkbox" name="addons" value="Cloud PMS" class="rounded text-indigo-600 bg-slate-700 border-slate-600 focus:ring-indigo-500">
+                                    <span class="text-sm">Cloud PMS</span>
+                                </label>
+                                <label class="flex items-center gap-2 p-3 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
+                                    <input type="checkbox" name="addons" value="Booking Engine" class="rounded text-indigo-600 bg-slate-700 border-slate-600 focus:ring-indigo-500">
+                                    <span class="text-sm">Booking Engine</span>
+                                </label>
+                                <label class="flex items-center gap-2 p-3 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
+                                    <input type="checkbox" name="addons" value="Channel Manager" class="rounded text-indigo-600 bg-slate-700 border-slate-600 focus:ring-indigo-500">
+                                    <span class="text-sm">Channel Manager</span>
+                                </label>
+                                <label class="flex items-center gap-2 p-3 bg-slate-800 rounded-lg cursor-pointer hover:bg-slate-700 transition-colors">
+                                    <input type="checkbox" name="addons" value="Cloud POS" class="rounded text-indigo-600 bg-slate-700 border-slate-600 focus:ring-indigo-500">
+                                    <span class="text-sm">Cloud POS</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Dates -->
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-2">Last Payment Date *</label>
+                                <input type="date" id="lastPaymentDate" required onchange="calculateRenewalDate()" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-2">Next Renewal Date *</label>
+                                <input type="date" id="nextRenewalDate" required class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-slate-400 mb-2">Status</label>
+                                <select id="clientStatus" class="w-full bg-slate-800 border border-slate-700 rounded-lg px-4 py-2 focus:outline-none focus:border-indigo-500">
+                                    <option value="Active">Active</option>
+                                    <option value="Trial">Trial</option>
+                                    <option value="Expired">Expired</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                    <option value="Suspended">Suspended</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end gap-3 pt-6 border-t border-slate-800 sticky bottom-0 bg-slate-900 pb-2">
+                        <button type="button" onclick="closeClientModal()" class="px-6 py-2 bg-slate-800 hover:bg-slate-700 rounded-lg transition-colors">Cancel</button>
+                        <button type="submit" class="px-6 py-2 bg-indigo-600 hover:bg-indigo-700 rounded-lg font-medium transition-colors">
+                            <i class="fas fa-save mr-2"></i>Save Client
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Invoice Preview Modal -->
+    <div id="invoiceModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden overflow-y-auto">
+        <div class="min-h-screen px-4 py-8 flex items-center justify-center">
+            <div class="bg-white rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto custom-scrollbar relative">
+                <div class="sticky top-0 bg-white border-b p-4 flex justify-between items-center z-10">
+                    <h3 class="text-lg font-bold text-gray-800">Invoice Preview</h3>
+                    <div class="flex gap-2">
+                        <button onclick="downloadInvoicePDF()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">
+                            <i class="fas fa-download mr-2"></i>Download PDF
+                        </button>
+                        <button onclick="sendInvoiceEmail()" class="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700">
+                            <i class="fas fa-paper-plane mr-2"></i>Send Email
+                        </button>
+                        <button onclick="closeInvoiceModal()" class="p-2 text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="invoiceContent" class="p-8 bg-white text-gray-900">
+                    <!-- Invoice content injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Data Store
+        let clients = JSON.parse(localStorage.getItem('subflow_clients')) || [];
+        let templates = JSON.parse(localStorage.getItem('subflow_templates')) || [];
+        let emailSettings = JSON.parse(localStorage.getItem('subflow_email')) || {};
+        let activities = JSON.parse(localStorage.getItem('subflow_activities')) || [];
+        let invoices = JSON.parse(localStorage.getItem('subflow_invoices')) || [];
+        let currentInvoiceData = null;
+        let pendingImportData = null;
+
+        // Field mappings for Excel import
+        const fieldMappings = {
+            'Client_ID': ['client_id', 'id', 'client id', 'cli_id'],
+            'Property_Name': ['property', 'property name', 'hotel', 'property_name'],
+            'Client_Name': ['name', 'client name', 'contact person', 'client_name'],
+            'Contact_Number': ['phone', 'contact', 'mobile', 'contact_number'],
+            'WhatsApp_Number': ['whatsapp', 'wa', 'whatsapp_number'],
+            'Email_1': ['email', 'email1', 'primary email', 'email_id'],
+            'Email_2': ['email2', 'cc email', 'secondary email'],
+            'Email_3': ['email3', 'additional email'],
+            'Package_Type': ['package', 'plan', 'package_type'],
+            'Subscription_Type': ['billing', 'cycle', 'subscription', 'subscription_type'],
+            'Amount': ['price', 'cost', 'subscription_amount', 'amount'],
+            'Currency': ['currency', 'cur'],
+            'Last_Payment_Date': ['last payment', 'paid date', 'last_payment_date'],
+            'Next_Renewal_Date': ['renewal', 'due date', 'next renewal', 'next_renewal_date'],
+            'Sales_Person': ['sales', 'rep', 'sales_person'],
+            'Status': ['status', 'state']
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateDate();
+            loadSettings();
+            if (clients.length === 0) generateSampleData();
+            updateDashboard();
+            renderClients();
+            renderTemplates();
+            checkAutomations();
+            setInterval(updateDate, 60000);
+            
+            // Set default dates
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('lastPaymentDate').value = today;
+            calculateRenewalDate();
+        });
+
+        function updateDate() {
+            const now = new Date();
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('en-US', { 
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' 
+            });
+        }
+
+        function loadSettings() {
+            if (emailSettings.smtp) {
+                document.getElementById('smtpHost').value = emailSettings.smtp.host || '';
+                document.getElementById('smtpPort').value = emailSettings.smtp.port || '587';
+                document.getElementById('smtpSecure').value = emailSettings.smtp.secure || 'tls';
+                document.getElementById('smtpUser').value = emailSettings.smtp.user || '';
+                document.getElementById('smtpPass').value = emailSettings.smtp.pass || '';
+            }
+            if (emailSettings.cc) {
+                document.getElementById('ccAccounts').value = emailSettings.cc.accounts || '';
+                document.getElementById('ccManager').value = emailSettings.cc.manager || '';
+                document.getElementById('ccSales').value = emailSettings.cc.sales || '';
+            }
+        }
+
+        function generateSampleData() {
+            const sample = [
+                {
+                    id: 'CLI-001', propertyName: 'Grand Plaza Hotel', clientName: 'Michael Johnson',
+                    contactNumber: '+1-555-0101', whatsappNumber: '+1-555-0101',
+                    email1: 'michael@grandplaza.com', email2: 'accounts@grandplaza.com', email3: '',
+                    packageType: 'Professional', subscriptionType: 'Yearly', currency: 'USD', amount: 2388,
+                    addons: ['Cloud PMS', 'Booking Engine', 'Channel Manager', 'Cloud POS'],
+                    lastPaymentDate: '2024-02-15', nextRenewalDate: '2025-02-15',
+                    validTill: '2025-02-15', salesPerson: 'Sarah Smith', status: 'Active',
+                    renewalEmailSent: null, reminderDate: null, dueDate: '2025-02-15',
+                    emailHistory: [], createdAt: new Date().toISOString()
+                },
+                {
+                    id: 'CLI-002', propertyName: 'Seaside Resort', clientName: 'Emma Williams',
+                    contactNumber: '+1-555-0202', whatsappNumber: '+1-555-0202',
+                    email1: 'emma@seaside.com', email2: '', email3: '',
+                    packageType: 'Starter', subscriptionType: 'Quarterly', currency: 'USD', amount: 297,
+                    addons: ['Cloud PMS', 'Booking Engine'],
+                    lastPaymentDate: '2024-11-15', nextRenewalDate: '2025-02-15',
+                    validTill: '2025-02-15', salesPerson: 'John Doe', status: 'Active',
+                    renewalEmailSent: null, reminderDate: null, dueDate: '2025-02-15',
+                    emailHistory: [], createdAt: new Date().toISOString()
+                }
+            ];
+            clients = sample;
+            saveData();
+        }
+
+        function saveData() {
+            localStorage.setItem('subflow_clients', JSON.stringify(clients));
+            localStorage.setItem('subflow_templates', JSON.stringify(templates));
+            localStorage.setItem('subflow_email', JSON.stringify(emailSettings));
+            localStorage.setItem('subflow_activities', JSON.stringify(activities));
+            localStorage.setItem('subflow_invoices', JSON.stringify(invoices));
+        }
+
+        function showSection(sectionId) {
+            document.querySelectorAll('main > section').forEach(s => s.classList.add('hidden'));
+            document.getElementById(sectionId).classList.remove('hidden');
+            
+            const titles = {
+                'dashboard': 'Dashboard',
+                'clients': 'Client Management',
+                'templates': 'Invoice Templates',
+                'emails': 'Email Configuration',
+                'import': 'Import & Export Data',
+                'automation': 'Automation Center'
+            };
+            document.getElementById('pageTitle').textContent = titles[sectionId];
+
+            document.querySelectorAll('.nav-btn').forEach(btn => {
+                const isActive = btn.getAttribute('onclick').includes(sectionId);
+                btn.classList.toggle('bg-indigo-500/20', isActive);
+                btn.classList.toggle('text-indigo-400', isActive);
+                btn.classList.toggle('border-indigo-500/30', isActive);
+                btn.classList.toggle('text-slate-400', !isActive);
+            });
+
+            if (sectionId === 'automation') updateAutomationStats();
+        }
+
+        // Client Management
+        function openAddClientModal() {
+            document.getElementById('clientModal').classList.remove('hidden');
+            document.getElementById('modalTitle').textContent = 'Add New Client';
+            document.getElementById('clientForm').reset();
+            document.getElementById('editClientId').value = '';
+            document.getElementById('lastPaymentDate').valueAsDate = new Date();
+            calculateRenewalDate();
+        }
+
+        function closeClientModal() {
+            document.getElementById('clientModal').classList.add('hidden');
+        }
+
+        function calculateRenewalDate() {
+            const lastPayment = document.getElementById('lastPaymentDate').value;
+            const type = document.getElementById('subscriptionType').value;
+            if (!lastPayment) return;
+
+            const date = new Date(lastPayment);
+            switch(type) {
+                case 'Monthly': date.setMonth(date.getMonth() + 1); break;
+                case 'Quarterly': date.setMonth(date.getMonth() + 3); break;
+                case 'Half-Yearly': date.setMonth(date.getMonth() + 6); break;
+                case 'Yearly': date.setFullYear(date.getFullYear() + 1); break;
+            }
+            document.getElementById('nextRenewalDate').value = date.toISOString().split('T')[0];
+        }
+
+        function saveClient(e) {
+            e.preventDefault();
+            const editId = document.getElementById('editClientId').value;
+            const addons = Array.from(document.querySelectorAll('input[name="addons"]:checked')).map(cb => cb.value);
+
+            const clientData = {
+                id: document.getElementById('clientId').value,
+                propertyName: document.getElementById('propertyName').value,
+                clientName: document.getElementById('clientName').value,
+                contactNumber: document.getElementById('contactNumber').value,
+                whatsappNumber: document.getElementById('whatsappNumber').value,
+                email1: document.getElementById('email1').value,
+                email2: document.getElementById('email2').value,
+                email3: document.getElementById('email3').value,
+                packageType: document.getElementById('packageType').value,
+                subscriptionType: document.getElementById('subscriptionType').value,
+                currency: document.getElementById('currency').value,
+                amount: parseFloat(document.getElementById('subscriptionAmount').value),
+                addons: addons,
+                lastPaymentDate: document.getElementById('lastPaymentDate').value,
+                nextRenewalDate: document.getElementById('nextRenewalDate').value,
+                validTill: document.getElementById('nextRenewalDate').value,
+                salesPerson: document.getElementById('salesPerson').value,
+                status: document.getElementById('clientStatus').value,
+                renewalEmailSent: null,
+                reminderDate: null,
+                dueDate: document.getElementById('nextRenewalDate').value,
+                emailHistory: [],
+                updatedAt: new Date().toISOString()
+            };
+
+            if (editId) {
+                const idx = clients.findIndex(c => c.id === editId);
+                if (idx !== -1) {
+                    clientData.createdAt = clients[idx].createdAt;
+                    clientData.emailHistory = clients[idx].emailHistory;
+                    clients[idx] = clientData;
+                }
+            } else {
+                if (clients.find(c => c.id === clientData.id)) {
+                    alert('Client ID already exists!');
+                    return;
+                }
+                clientData.createdAt = new Date().toISOString();
+                clients.push(clientData);
+            }
+
+            saveData();
+            updateDashboard();
+            renderClients();
+            closeClientModal();
+            showNotification(editId ? 'Client updated!' : 'Client added successfully!', 'success');
+        }
+
+        function renderClients() {
+            const search = document.getElementById('searchClients').value.toLowerCase();
+            const statusFilter = document.getElementById('filterStatus').value;
+            
+            let filtered = clients.filter(c => {
+                const matchesSearch = !search || 
+                    c.propertyName.toLowerCase().includes(search) ||
+                    c.clientName.toLowerCase().includes(search) ||
+                    c.email1.toLowerCase().includes(search) ||
+                    c.id.toLowerCase().includes(search);
+                const matchesStatus = !statusFilter || c.status === statusFilter;
+                return matchesSearch && matchesStatus;
+            });
+
+            const tbody = document.getElementById('clientsTableBody');
+            tbody.innerHTML = filtered.map(client => {
+                const daysUntil = getDaysUntil(client.nextRenewalDate);
+                let statusClass = 'bg-emerald-500/20 text-emerald-400';
+                let statusText = client.status;
+                
+                if (client.status === 'Active' && daysUntil < 0) {
+                    statusClass = 'bg-red-500/20 text-red-400 animate-pulse';
+                    statusText = 'Overdue';
+                } else if (client.status === 'Active' && daysUntil <= 7) {
+                    statusClass = 'bg-amber-500/20 text-amber-400';
+                    statusText = 'Due Soon';
+                }
+
+                return `
+                    <tr class="hover:bg-slate-800/50 transition-colors">
+                        <td class="px-4 py-3"><input type="checkbox" class="client-checkbox rounded bg-slate-700 border-slate-600" value="${client.id}"></td>
+                        <td class="px-4 py-3">
+                            <div class="font-medium text-white">${client.propertyName}</div>
+                            <div class="text-xs text-slate-400">${client.clientName}</div>
+                            <div class="text-xs text-slate-500">${client.email1}</div>
+                        </td>
+                        <td class="px-4 py-3">
+                            <span class="px-2 py-1 bg-slate-700 rounded text-xs">${client.packageType}</span>
+                            <div class="text-xs text-slate-500 mt-1">${client.subscriptionType}</div>
+                        </td>
+                        <td class="px-4 py-3 text-white">${client.currency} ${client.amount}</td>
+                        <td class="px-4 py-3">
+                            <div class="text-white">${client.nextRenewalDate}</div>
+                            <div class="text-xs ${daysUntil < 0 ? 'text-red-400' : daysUntil <= 7 ? 'text-amber-400' : 'text-slate-500'}">
+                                ${daysUntil < 0 ? `${Math.abs(daysUntil)} days overdue` : daysUntil === 0 ? 'Due today' : `${daysUntil} days left`}
+                            </div>
+                        </td>
+                        <td class="px-4 py-3"><span class="px-2 py-1 rounded-full text-xs ${statusClass}">${statusText}</span></td>
+                        <td class="px-4 py-3">
+                            <div class="flex gap-2">
+                                <button onclick="editClient('${client.id}')" class="p-2 hover:bg-slate-700 rounded text-slate-400 hover:text-white" title="Edit"><i class="fas fa-edit"></i></button>
+                                <button onclick="generateInvoice('${client.id}')" class="p-2 hover:bg-indigo-900/50 rounded text-indigo-400 hover:text-indigo-300" title="Generate Invoice"><i class="fas fa-file-invoice"></i></button>
+                                <button onclick="markAsPaid('${client.id}')" class="p-2 hover:bg-emerald-900/50 rounded text-emerald-400 hover:text-emerald-300" title="Mark Paid"><i class="fas fa-check"></i></button>
+                                <button onclick="deleteClient('${client.id}')" class="p-2 hover:bg-red-900/50 rounded text-red-400 hover:text-red-300" title="Delete"><i class="fas fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            document.getElementById('clientCountBadge').textContent = clients.length;
+        }
+
+        function getDaysUntil(dateString) {
+            const target = new Date(dateString);
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            target.setHours(0,0,0,0);
+            return Math.ceil((target - today) / (1000 * 60 * 60 * 24));
+        }
+
+        function editClient(id) {
+            const client = clients.find(c => c.id === id);
+            if (!client) return;
+
+            document.getElementById('editClientId').value = id;
+            document.getElementById('clientId').value = client.id;
+            document.getElementById('propertyName').value = client.propertyName;
+            document.getElementById('clientName').value = client.clientName;
+            document.getElementById('contactNumber').value = client.contactNumber;
+            document.getElementById('whatsappNumber').value = client.whatsappNumber;
+            document.getElementById('email1').value = client.email1;
+            document.getElementById('email2').value = client.email2 || '';
+            document.getElementById('email3').value = client.email3 || '';
+            document.getElementById('packageType').value = client.packageType;
+            document.getElementById('subscriptionType').value = client.subscriptionType;
+            document.getElementById('currency').value = client.currency;
+            document.getElementById('subscriptionAmount').value = client.amount;
+            document.getElementById('lastPaymentDate').value = client.lastPaymentDate;
+            document.getElementById('nextRenewalDate').value = client.nextRenewalDate;
+            document.getElementById('salesPerson').value = client.salesPerson || '';
+            document.getElementById('clientStatus').value = client.status;
+
+            document.querySelectorAll('input[name="addons"]').forEach(cb => {
+                cb.checked = client.addons.includes(cb.value);
+            });
+
+            document.getElementById('modalTitle').textContent = 'Edit Client';
+            document.getElementById('clientModal').classList.remove('hidden');
+        }
+
+        function deleteClient(id) {
+            if (!confirm('Are you sure you want to delete this client?')) return;
+            clients = clients.filter(c => c.id !== id);
+            saveData();
+            updateDashboard();
+            renderClients();
+            showNotification('Client deleted', 'info');
+        }
+
+        function markAsPaid(id) {
+            const client = clients.find(c => c.id === id);
+            if (!client) return;
+
+            const currentRenewal = new Date(client.nextRenewalDate);
+            const nextRenewal = new Date(currentRenewal);
+            
+            switch(client.subscriptionType) {
+                case 'Monthly': nextRenewal.setMonth(nextRenewal.getMonth() + 1); break;
+                case 'Quarterly': nextRenewal.setMonth(nextRenewal.getMonth() + 3); break;
+                case 'Half-Yearly': nextRenewal.setMonth(nextRenewal.getMonth() + 6); break;
+                case 'Yearly': nextRenewal.setFullYear(nextRenewal.getFullYear() + 1); break;
+            }
+
+            client.lastPaymentDate = client.nextRenewalDate;
+            client.nextRenewalDate = nextRenewal.toISOString().split('T')[0];
+            client.validTill = client.nextRenewalDate;
+            client.dueDate = client.nextRenewalDate;
+            client.renewalEmailSent = null;
+            client.reminderDate = null;
+            client.status = 'Active';
+
+            // Record payment
+            invoices.push({
+                id: 'INV-' + Date.now(),
+                clientId: client.id,
+                clientName: client.clientName,
+                propertyName: client.propertyName,
+                amount: client.amount,
+                currency: client.currency,
+                date: new Date().toISOString().split('T')[0],
+                status: 'Paid',
+                type: 'Renewal'
+            });
+
+            saveData();
+            updateDashboard();
+            renderClients();
+            showNotification('Payment recorded! Next renewal: ' + client.nextRenewalDate, 'success');
+        }
+
+        // Invoice & Templates
+        function setTemplateType(type) {
+            document.querySelectorAll('.template-type-btn').forEach(btn => {
+                btn.classList.remove('active', 'bg-indigo-600', 'border-indigo-500');
+                btn.classList.add('bg-slate-800', 'border-slate-700');
+            });
+            event.target.closest('.template-type-btn').classList.add('active', 'bg-indigo-600', 'border-indigo-500');
+            event.target.closest('.template-type-btn').classList.remove('bg-slate-800', 'border-slate-700');
+
+            document.getElementById('htmlEditorSection').classList.toggle('hidden', type === 'pdf');
+            document.getElementById('pdfUploadSection').classList.toggle('hidden', type === 'html');
+        }
+
+        function handleLogoUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById('logoImg').src = event.target.result;
+                document.getElementById('logoPreview').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleLogoDrop(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            e.currentTarget.classList.remove('dragover');
+            
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('logoImg').src = event.target.result;
+                    document.getElementById('logoPreview').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handlePDFUpload(e) {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('pdfTemplateName').querySelector('span').textContent = file.name;
+                document.getElementById('pdfTemplateName').classList.remove('hidden');
+            }
+        }
+
+        function saveTemplate() {
+            const template = {
+                id: Date.now().toString(),
+                name: document.getElementById('templateName').value,
+                type: document.querySelector('.template-type-btn.active').dataset.type,
+                header: document.getElementById('templateHeader').value,
+                body: document.getElementById('templateBody').value,
+                footer: document.getElementById('templateFooter').value,
+                logo: document.getElementById('logoImg').src || null,
+                createdAt: new Date().toISOString()
+            };
+
+            const existingIdx = templates.findIndex(t => t.name === template.name);
+            if (existingIdx !== -1) templates[existingIdx] = template;
+            else templates.push(template);
+
+            saveData();
+            renderTemplates();
+            showNotification('Template saved!', 'success');
+        }
+
+        function renderTemplates() {
+            const container = document.getElementById('savedTemplatesList');
+            if (templates.length === 0) {
+                container.innerHTML = '<p class="text-slate-500 text-sm col-span-3">No saved templates</p>';
+                return;
+            }
+
+            container.innerHTML = templates.map(t => `
+                <div class="bg-slate-800 rounded-xl p-4 border border-slate-700 hover:border-indigo-500/50 transition-colors cursor-pointer" onclick="loadTemplate('${t.id}')">
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-medium text-white">${t.name}</h4>
+                        <span class="text-xs px-2 py-1 rounded bg-slate-700 text-slate-300">${t.type}</span>
+                    </div>
+                    <p class="text-xs text-slate-500">Created: ${new Date(t.createdAt).toLocaleDateString()}</p>
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="event.stopPropagation(); loadTemplate('${t.id}')" class="text-xs text-indigo-400 hover:text-indigo-300"><i class="fas fa-edit mr-1"></i>Edit</button>
+                        <button onclick="event.stopPropagation(); deleteTemplate('${t.id}')" class="text-xs text-red-400 hover:text-red-300"><i class="fas fa-trash mr-1"></i>Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function loadTemplate(id) {
+            const t = templates.find(tm => tm.id === id);
+            if (!t) return;
+
+            document.getElementById('templateName').value = t.name;
+            document.getElementById('templateHeader').value = t.header;
+            document.getElementById('templateBody').value = t.body;
+            document.getElementById('templateFooter').value = t.footer;
+            if (t.logo) {
+                document.getElementById('logoImg').src = t.logo;
+                document.getElementById('logoPreview').classList.remove('hidden');
+            }
+            setTemplateType(t.type);
+        }
+
+        function deleteTemplate(id) {
+            if (!confirm('Delete this template?')) return;
+            templates = templates.filter(t => t.id !== id);
+            saveData();
+            renderTemplates();
+        }
+
+        function previewTemplate() {
+            const sampleClient = clients[0] || {
+                propertyName: 'Sample Hotel', clientName: 'John Doe', email1: 'john@example.com',
+                packageType: 'Professional', subscriptionType: 'Yearly', currency: 'USD', amount: 1999,
+                addons: ['Cloud PMS', 'Booking Engine'], nextRenewalDate: '2025-03-15',
+                validTill: '2025-03-15', salesPerson: 'Jane Smith'
+            };
+
+            const html = generateInvoiceHTML(sampleClient, true);
+            document.getElementById('templatePreview').innerHTML = html;
+        }
+
+        function generateInvoiceHTML(client, isPreview = false) {
+            const template = templates.find(t => t.name === document.getElementById('templateName')?.value) || {
+                header: document.getElementById('templateHeader').value,
+                body: document.getElementById('templateBody').value,
+                footer: document.getElementById('templateFooter').value
+            };
+
+            let html = template.body;
+            const invoiceNumber = 'INV-' + Date.now().toString().slice(-6);
+            
+            // Replace placeholders
+            const replacements = {
+                '{{CLIENT_NAME}}': client.clientName,
+                '{{PROPERTY_NAME}}': client.propertyName,
+                '{{CLIENT_EMAIL}}': client.email1,
+                '{{PACKAGE_TYPE}}': client.packageType,
+                '{{SUBSCRIPTION_TYPE}}': client.subscriptionType,
+                '{{AMOUNT}}': client.amount,
+                '{{CURRENCY}}': client.currency,
+                '{{DUE_DATE}}': client.nextRenewalDate,
+                '{{VALID_TILL}}': client.validTill,
+                '{{SALES_PERSON}}': client.salesPerson || 'Support Team',
+                '{{ADDONS}}': client.addons.join(', '),
+                '{{INVOICE_NUMBER}}': invoiceNumber,
+                '{{COMPANY_NAME}}': template.header.split('\n')[0] || 'Your Company',
+                '{{COMPANY_ADDRESS}}': template.header.split('\n')[1] || '',
+                '{{COMPANY_PHONE}}': template.header.split('\n')[2]?.split('|')[0]?.trim() || '',
+                '{{COMPANY_EMAIL}}': template.header.split('\n')[2]?.split('|')[1]?.trim() || '',
+                '{{BANK_DETAILS}}': 'Bank: Sample Bank, Account: 1234567890',
+                '{{GST_NUMBER}}': 'GST: 12ABCDE1234F1Z5'
+            };
+
+            Object.keys(replacements).forEach(key => {
+                html = html.replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacements[key]);
+            });
+
+            // Add header and footer
+            const fullHTML = `
+                <div style="font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto;">
+                    <div style="border-bottom: 2px solid #6366f1; padding-bottom: 20px; margin-bottom: 20px;">
+                        <pre style="margin: 0; font-family: Arial; white-space: pre-wrap;">${template.header}</pre>
+                    </div>
+                    ${html}
+                    <div style="border-top: 1px solid #ddd; margin-top: 30px; padding-top: 20px; font-size: 12px; color: #666;">
+                        <pre style="margin: 0; font-family: Arial; white-space: pre-wrap;">${template.footer}</pre>
+                    </div>
+                </div>
+            `;
+
+            if (!isPreview) {
+                currentInvoiceData = { client, html, invoiceNumber };
+            }
+
+            return fullHTML;
+        }
+
+        function generateInvoice(clientId) {
+            const client = clients.find(c => c.id === clientId);
+            if (!client) return;
+
+            const html = generateInvoiceHTML(client);
+            document.getElementById('invoiceContent').innerHTML = html;
+            document.getElementById('invoiceModal').classList.remove('hidden');
+        }
+
+        function closeInvoiceModal() {
+            document.getElementById('invoiceModal').classList.add('hidden');
+        }
+
+        async function downloadInvoicePDF() {
+            const element = document.getElementById('invoiceContent');
+            const canvas = await html2canvas(element, { scale: 2 });
+            const imgData = canvas.toDataURL('image/png');
+            
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+            pdf.save(`Invoice-${currentInvoiceData?.invoiceNumber || 'download'}.pdf`);
+        }
+
+        function downloadPreviewPDF() {
+            downloadInvoicePDF();
+        }
+
+        // Email Functions
+        function saveEmailSettings() {
+            emailSettings.smtp = {
+                host: document.getElementById('smtpHost').value,
+                port: parseInt(document.getElementById('smtpPort').value),
+                secure: document.getElementById('smtpSecure').value,
+                user: document.getElementById('smtpUser').value,
+                pass: document.getElementById('smtpPass').value
+            };
+            emailSettings.cc = {
+                accounts: document.getElementById('ccAccounts').value,
+                manager: document.getElementById('ccManager').value,
+                sales: document.getElementById('ccSales').value
+            };
+            saveData();
+            showNotification('Email settings saved!', 'success');
+        }
+
+        function saveEmailTemplates() {
+            emailSettings.templates = {
+                preRenewal: {
+                    enabled: document.getElementById('enablePreRenewal').checked,
+                    subject: document.getElementById('preRenewalSubject').value,
+                    body: document.getElementById('preRenewalBody').value
+                },
+                postRenewal: {
+                    enabled: document.getElementById('enablePostRenewal').checked,
+                    subject: document.getElementById('postRenewalSubject').value,
+                    body: document.getElementById('postRenewalBody').value
+                },
+                continuous: {
+                    enabled: document.getElementById('enableContinuous').checked,
+                    subject: document.getElementById('continuousSubject').value,
+                    body: document.getElementById('continuousBody').value
+                }
+            };
+            saveData();
+            showNotification('Email templates saved!', 'success');
+        }
+
+        async function testEmailConnection() {
+            showNotification('Testing connection... (Simulated)', 'info');
+            // In real implementation, this would test SMTP connection
+            setTimeout(() => showNotification('Connection successful! (Demo Mode)', 'success'), 1500);
+        }
+
+        // Excel Import/Export
+        function downloadFormatExcel() {
+            const headers = Object.keys(fieldMappings);
+            const sample = [['CLI-001', 'Grand Hotel', 'John Doe', '+1234567890', '+1234567890', 'john@hotel.com', 'accounts@hotel.com', '', 'Professional', 'Yearly', 1200, 'USD', '2024-01-01', '2025-01-01', 'Sales Person', 'Active']];
+            
+            const ws = XLSX.utils.aoa_to_sheet([headers, ...sample]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Client Format');
+            XLSX.writeFile(wb, 'Client_Import_Template.xlsx');
+        }
+
+        function handleExcelUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            processExcelFile(file);
+        }
+
+        function handleExcelDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            const file = e.dataTransfer.files[0];
+            if (file) processExcelFile(file);
+        }
+
+        function processExcelFile(file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                
+                if (jsonData.length < 2) {
+                    alert('File appears to be empty or invalid format');
+                    return;
+                }
+
+                pendingImportData = jsonData;
+                showImportPreview(jsonData);
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function showImportPreview(data) {
+            const preview = data.slice(0, 6); // Header + 5 rows
+            const table = document.getElementById('previewTable');
+            
+            table.innerHTML = preview.map((row, idx) => `
+                <tr class="${idx === 0 ? 'bg-slate-700 font-medium' : 'border-b border-slate-800'}">
+                    ${row.map(cell => `<td class="px-3 py-2 text-xs">${cell || ''}</td>`).join('')}
+                </tr>
+            `).join('');
+
+            document.getElementById('importPreview').classList.remove('hidden');
+        }
+
+        function cancelImport() {
+            pendingImportData = null;
+            document.getElementById('importPreview').classList.add('hidden');
+            document.getElementById('excelUpload').value = '';
+        }
+
+        function confirmImport() {
+            if (!pendingImportData || pendingImportData.length < 2) return;
+
+            const headers = pendingImportData[0].map(h => h.toString().trim());
+            const rows = pendingImportData.slice(1);
+            let success = 0, failed = 0;
+
+            rows.forEach(row => {
+                if (!row[0]) { failed++; return; }
+                
+                const client = {
+                    id: row[0]?.toString() || '',
+                    propertyName: row[1]?.toString() || '',
+                    clientName: row[2]?.toString() || '',
+                    contactNumber: row[3]?.toString() || '',
+                    whatsappNumber: row[4]?.toString() || '',
+                    email1: row[5]?.toString() || '',
+                    email2: row[6]?.toString() || '',
+                    email3: row[7]?.toString() || '',
+                    packageType: row[8]?.toString() || 'Starter',
+                    subscriptionType: row[9]?.toString() || 'Monthly',
+                    amount: parseFloat(row[10]) || 0,
+                    currency: row[11]?.toString() || 'USD',
+                    lastPaymentDate: formatDate(row[12]),
+                    nextRenewalDate: formatDate(row[13]),
+                    validTill: formatDate(row[13]),
+                    salesPerson: row[14]?.toString() || '',
+                    status: row[15]?.toString() || 'Active',
+                    addons: [],
+                    emailHistory: [],
+                    createdAt: new Date().toISOString()
+                };
+
+                if (clients.find(c => c.id === client.id)) {
+                    failed++;
+                } else {
+                    clients.push(client);
+                    success++;
+                }
+            });
+
+            saveData();
+            updateDashboard();
+            renderClients();
+
+            document.getElementById('statTotal').textContent = rows.length;
+            document.getElementById('statSuccess').textContent = success;
+            document.getElementById('statFailed').textContent = failed;
+            document.getElementById('importStats').classList.remove('hidden');
+            document.getElementById('importPreview').classList.add('hidden');
+
+            showNotification(`Imported ${success} clients successfully!`, 'success');
+            pendingImportData = null;
+        }
+
+        function formatDate(cell) {
+            if (!cell) return new Date().toISOString().split('T')[0];
+            if (typeof cell === 'number') {
+                // Excel date serial number
+                const date = new Date((cell - 25569) * 86400 * 1000);
+                return date.toISOString().split('T')[0];
+            }
+            return cell.toString();
+        }
+
+        function exportToExcel(type) {
+            let data = [], filename = '';
+            const activeOnly = document.getElementById('exportActiveOnly')?.checked;
+            const withHistory = document.getElementById('exportWithHistory')?.checked;
+            const dueSoon = document.getElementById('exportDueSoon')?.checked;
+
+            let exportClients = [...clients];
+            if (activeOnly) exportClients = exportClients.filter(c => c.status === 'Active');
+            if (dueSoon) {
+                const thirtyDays = new Date();
+                thirtyDays.setDate(thirtyDays.getDate() + 30);
+                exportClients = exportClients.filter(c => new Date(c.nextRenewalDate) <= thirtyDays);
+            }
+
+            if (type === 'clients' || type === 'full') {
+                data = exportClients.map(c => ({
+                    'Client ID': c.id,
+                    'Property Name': c.propertyName,
+                    'Client Name': c.clientName,
+                    'Contact': c.contactNumber,
+                    'WhatsApp': c.whatsappNumber,
+                    'Email 1': c.email1,
+                    'Email 2': c.email2,
+                    'Email 3': c.email3,
+                    'Package': c.packageType,
+                    'Billing Cycle': c.subscriptionType,
+                    'Amount': c.amount,
+                    'Currency': c.currency,
+                    'Last Payment': c.lastPaymentDate,
+                    'Next Renewal': c.nextRenewalDate,
+                    'Status': c.status,
+                    'Sales Person': c.salesPerson,
+                    'Add-ons': c.addons.join(', '),
+                    ...(withHistory ? { 'Email History': JSON.stringify(c.emailHistory) } : {})
+                }));
+                filename = 'Clients_Export';
+            } else if (type === 'invoices') {
+                data = invoices;
+                filename = 'Invoices_Export';
+            } else if (type === 'payments') {
+                data = invoices.filter(i => i.status === 'Paid');
+                filename = 'Payments_Export';
+            }
+
+            const ws = XLSX.utils.json_to_sheet(data);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Data');
+            XLSX.writeFile(wb, `${filename}_${new Date().toISOString().split('T')[0]}.xlsx`);
+            
+            showNotification('Export downloaded!', 'success');
+        }
+
+        // Automation
+        function checkAutomations() {
+            const today = new Date();
+            today.setHours(0,0,0,0);
+            
+            let preRenewal = 0, postRenewal = 0, continuous = 0;
+
+            clients.forEach(client => {
+                if (client.status !== 'Active') return;
+                
+                const renewalDate = new Date(client.nextRenewalDate);
+                const daysUntil = Math.ceil((renewalDate - today) / (1000 * 60 * 60 * 24));
+                const daysAfter = Math.ceil((today - renewalDate) / (1000 * 60 * 60 * 24));
+
+                if (daysUntil === 7 && !client.renewalEmailSent) preRenewal++;
+                if (daysAfter === 7 && !client.reminderDate) postRenewal++;
+                if (daysAfter >= 8) continuous++;
+            });
+
+            const total = preRenewal + postRenewal + continuous;
+            const badge = document.getElementById('pendingEmails');
+            if (total > 0) {
+                badge.textContent = total;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+
+            return { preRenewal, postRenewal, continuous };
+        }
+
+        function updateAutomationStats() {
+            const stats = checkAutomations();
+            document.getElementById('countPreRenewal').textContent = stats.preRenewal;
+            document.getElementById('countPostRenewal').textContent = stats.postRenewal;
+            document.getElementById('countContinuous').textContent = stats.continuous;
+        }
+
+        function runAutomationNow() {
+            const today = new Date();
+            let sent = 0;
+            const templates = emailSettings.templates || {};
+
+            clients.forEach(client => {
+                if (client.status !== 'Active') return;
+                
+                const renewalDate = new Date(client.nextRenewalDate);
+                const daysUntil = Math.ceil((renewalDate - today) / (1000 * 60 * 60 * 24));
+                const daysAfter = Math.ceil((today - renewalDate) / (1000 * 60 * 60 * 24));
+
+                // Pre-renewal (7 days before)
+                if (daysUntil === 7 && !client.renewalEmailSent && templates.preRenewal?.enabled) {
+                    sendEmail(client, 'preRenewal', templates.preRenewal);
+                    client.renewalEmailSent = today.toISOString();
+                    sent++;
+                }
+                // Post-renewal (7 days after)
+                else if (daysAfter === 7 && !client.reminderDate && templates.postRenewal?.enabled) {
+                    sendEmail(client, 'postRenewal', templates.postRenewal);
+                    client.reminderDate = today.toISOString();
+                    sent++;
+                }
+                // Continuous (8+ days)
+                else if (daysAfter >= 8 && templates.continuous?.enabled) {
+                    const lastReminder = client.reminderDate ? new Date(client.reminderDate) : null;
+                    const daysSinceLast = lastReminder ? Math.ceil((today - lastReminder) / (1000 * 60 * 60 * 24)) : 999;
+                    
+                    if (daysSinceLast >= 1) {
+                        sendEmail(client, 'continuous', templates.continuous, daysAfter);
+                        client.reminderDate = today.toISOString();
+                        sent++;
+                    }
+                }
+            });
+
+            if (sent > 0) {
+                saveData();
+                updateDashboard();
+                showNotification(`Sent ${sent} emails!`, 'success');
+                logAutomation(`Sent ${sent} automated emails`);
+            } else {
+                showNotification('No emails to send at this time', 'info');
+            }
+        }
+
+        function sendEmail(client, type, template, daysOverdue = 0) {
+            let subject = template.subject;
+            let body = template.body;
+
+            // Replace placeholders
+            const replacements = {
+                '{{CLIENT_NAME}}': client.clientName,
+                '{{PROPERTY_NAME}}': client.propertyName,
+                '{{DUE_DATE}}': client.nextRenewalDate,
+                '{{AMOUNT}}': client.amount,
+                '{{CURRENCY}}': client.currency,
+                '{{PACKAGE_TYPE}}': client.packageType,
+                '{{SUBSCRIPTION_TYPE}}': client.subscriptionType,
+                '{{SALES_PERSON}}': client.salesPerson,
+                '{{INVOICE_NUMBER}}': 'INV-' + Date.now().toString().slice(-6),
+                '{{DAYS_OVERDUE}}': daysOverdue,
+                '{{COMPANY_NAME}}': emailSettings.smtp?.user?.split('@')[1]?.split('.')[0] || 'Your Company'
+            };
+
+            Object.keys(replacements).forEach(key => {
+                subject = subject.replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacements[key]);
+                body = body.replace(new RegExp(key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), replacements[key]);
+            });
+
+            // In real implementation, this would connect to SMTP server
+            // For demo, we simulate sending
+            client.emailHistory.unshift({
+                type: type,
+                subject: subject,
+                date: new Date().toISOString(),
+                status: 'sent'
+            });
+
+            activities.unshift({
+                type: 'email',
+                message: `${type} email sent to ${client.propertyName}`,
+                date: new Date().toLocaleString()
+            });
+        }
+
+        function manualEmailCheck() {
+            runAutomationNow();
+        }
+
+        function logAutomation(message) {
+            const log = document.getElementById('automationLog');
+            const entry = document.createElement('div');
+            entry.className = 'text-xs p-2 bg-slate-800/50 rounded border-l-2 border-indigo-500';
+            entry.innerHTML = `<span class="text-slate-400">${new Date().toLocaleTimeString()}:</span> <span class="text-slate-300">${message}</span>`;
+            log.insertBefore(entry, log.firstChild);
+        }
+
+        function scheduleAutomation() {
+            showNotification('Daily automation scheduled! (Runs at 9:00 AM)', 'success');
+            // In real implementation, this would use a background service worker
+        }
+
+        // Dashboard Updates
+        function updateDashboard() {
+            document.getElementById('totalClients').textContent = clients.length;
+            
+            const monthlyRevenue = clients
+                .filter(c => c.status === 'Active')
+                .reduce((sum, c) => sum + (c.amount / (c.subscriptionType === 'Monthly' ? 1 : c.subscriptionType === 'Quarterly' ? 3 : c.subscriptionType === 'Half-Yearly' ? 6 : 12)), 0);
+            document.getElementById('monthlyRevenue').textContent = '$' + Math.round(monthlyRevenue).toLocaleString();
+
+            const today = new Date();
+            const thirtyDays = new Date();
+            thirtyDays.setDate(today.getDate() + 30);
+
+            const upcoming = clients.filter(c => {
+                const renewal = new Date(c.nextRenewalDate);
+                return c.status === 'Active' && renewal >= today && renewal <= thirtyDays;
+            });
+            document.getElementById('dueThisWeek').textContent = upcoming.filter(c => {
+                const days = getDaysUntil(c.nextRenewalDate);
+                return days <= 7 && days >= 0;
+            }).length;
+
+            const overdue = clients.filter(c => c.status === 'Active' && getDaysUntil(c.nextRenewalDate) < 0);
+            document.getElementById('overdueCount').textContent = overdue.length;
+
+            // Render upcoming list
+            document.getElementById('upcomingRenewalsList').innerHTML = upcoming
+                .sort((a, b) => new Date(a.nextRenewalDate) - new Date(b.nextRenewalDate))
+                .slice(0, 10)
+                .map(c => {
+                    const days = getDaysUntil(c.nextRenewalDate);
+                    return `
+                        <div class="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg border-l-4 ${days < 0 ? 'border-red-500' : days <= 7 ? 'border-amber-500' : 'border-indigo-500'}">
+                            <div>
+                                <div class="font-medium text-white text-sm">${c.propertyName}</div>
+                                <div class="text-xs text-slate-400">${c.clientName} • ${c.currency} ${c.amount}</div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-xs text-white">${c.nextRenewalDate}</div>
+                                <div class="text-xs ${days < 0 ? 'text-red-400' : days <= 7 ? 'text-amber-400' : 'text-slate-500'}">${days < 0 ? 'Overdue' : days + ' days'}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+            // Activity log
+            document.getElementById('emailActivityLog').innerHTML = activities
+                .slice(0, 10)
+                .map(a => `
+                    <div class="flex items-center gap-3 p-3 bg-slate-800/30 rounded-lg">
+                        <div class="w-8 h-8 rounded-full ${getActivityColor(a.type)} flex items-center justify-center text-xs">
+                            <i class="fas ${getActivityIcon(a.type)}"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-sm text-white">${a.message}</div>
+                            <div class="text-xs text-slate-500">${a.date}</div>
+                        </div>
+                    </div>
+                `).join('') || '<p class="text-slate-500 text-sm text-center py-4">No recent activity</p>';
+        }
+
+        function getActivityColor(type) {
+            const colors = { email: 'bg-indigo-500', payment: 'bg-emerald-500', created: 'bg-purple-500', deleted: 'bg-red-500' };
+            return colors[type] || 'bg-slate-500';
+        }
+
+        function getActivityIcon(type) {
+            const icons = { email: 'fa-envelope', payment: 'fa-check', created: 'fa-plus', deleted: 'fa-trash' };
+            return icons[type] || 'fa-info';
+        }
+
+        // Utilities
+        function toggleSelectAll() {
+            const checked = document.getElementById('selectAll').checked;
+            document.querySelectorAll('.client-checkbox').forEach(cb => cb.checked = checked);
+        }
+
+        function generateInvoicesBulk() {
+            const selected = Array.from(document.querySelectorAll('.client-checkbox:checked')).map(cb => cb.value);
+            if (selected.length === 0) {
+                showNotification('Please select clients first', 'error');
+                return;
+            }
+            showNotification(`Generated ${selected.length} invoices!`, 'success');
+        }
+
+        function sendInvoiceEmail() {
+            showNotification('Invoice sent via email! (Demo Mode)', 'success');
+            closeInvoiceModal();
+        }
+
+        function showNotification(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `fixed top-4 right-4 px-6 py-3 rounded-xl shadow-2xl z-50 transform transition-all duration-300 translate-x-full ${type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-red-600' : 'bg-indigo-600'} text-white flex items-center gap-2`;
+            div.innerHTML = `<i class="fas ${type === 'success' ? 'fa-check-circle' : type === 'error' ? 'fa-exclamation-circle' : 'fa-info-circle'}"></i><span>${message}</span>`;
+            document.body.appendChild(div);
+            setTimeout(() => div.classList.remove('translate-x-full'), 100);
+            setTimeout(() => {
+                div.classList.add('translate-x-full');
+                setTimeout(() => div.remove(), 300);
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
